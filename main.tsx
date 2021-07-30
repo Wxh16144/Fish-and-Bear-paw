@@ -25,7 +25,7 @@ function useToggle (initialValue: boolean | Ref<boolean> = false) {
 }
 
 /**
- * A boolean ref with a toggler
+ * mutually exclusive boolean
  * @param [initialValue=false]
  */
 function useMutex (initialValue = false): [Ref<boolean>, Ref<boolean>] {
