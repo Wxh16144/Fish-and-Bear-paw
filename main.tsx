@@ -1,4 +1,7 @@
-import { createApp, defineComponent, ref, Fragment, computed, isRef, Ref } from 'vue';
+import type { Ref } from 'vue';
+import type { MaybeRef } from './type';
+import { createApp, defineComponent, ref, Fragment, computed, isRef, unref } from 'vue';
+
 
 /**
  * A boolean ref with a toggler
@@ -28,8 +31,19 @@ function useToggle (initialValue: boolean | Ref<boolean> = false) {
  * mutually exclusive boolean
  * @param [initialValue=false]
  */
-function useMutex (initialValue = false): [Ref<boolean>, Ref<boolean>] {
-  const boolean = ref<boolean>(initialValue);
+function useMutex (initialValue?: MaybeRef<boolean>): [Ref<boolean>, Ref<boolean>];
+function useMutex<X, Y> (value: [initialValue: MaybeRef<X>, versaValue: MaybeRef<Y>]): () => Y | X;
+function useMutex<X, Y> (value: [initialValue: MaybeRef<X>, versaValue: MaybeRef<Y>]): [Y, X];
+function useMutex (value: MaybeRef<boolean> | [any, any] = false) {
+  if (Array.isArray(value))
+    return () => {
+      const [initialValue, versaValue] = value.reverse()
+      return isRef(initialValue)
+        ? initialValue.value = unref(versaValue)
+        : unref(versaValue)
+    }
+
+  const boolean = ref<boolean>(unref(value));
   const versa = computed<boolean>({
     get: () => !boolean.value,
     set: () => (boolean.value = versa.value)
@@ -44,6 +58,9 @@ const App = defineComponent({
     const [fish, bearPaw] = useMutex();
     const toggleFish = useToggle(fish);
     const toggleBearPaw = useToggle(bearPaw);
+
+    const toggleBg = useMutex(['white', 'black'])
+    const backgroundColor = ref(toggleBg())
 
     const FishComp = () =>
       <span onClick={() => toggleFish()}>{`${fish.value ? '你得到' : '虽然你失去'}了鱼，`}</span>
@@ -61,7 +78,12 @@ const App = defineComponent({
     return () => (
       <Fragment>
         {all.value ? <span>做你的白日梦去吧！</span> : <Content />}
-        <button onClick={() => toggleAll()}>{all.value ? '重新选择' : '全都要'}</button>
+        <button
+          style={{ backgroundColor: backgroundColor.value }}
+          onClick={() => toggleAll()}
+        >
+          {all.value ? '重新选择' : '全都要'}
+        </button>
       </Fragment>
     );
   }
